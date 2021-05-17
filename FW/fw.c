@@ -62,18 +62,14 @@ int main(int argc, char *argv[]) {
   if(myrank == 0){
     MPI_Scatter(&dist[resto][0],slice*n,MPI_FLOAT,MPI_IN_PLACE,slice*n,MPI_FLOAT,0,MPI_COMM_WORLD);
     MPI_Scatter(&caminos[resto][0],slice*n,MPI_INT,MPI_IN_PLACE,slice*n,MPI_INT,0,MPI_COMM_WORLD);
-        //printf("Ya hemos hecho el scatter con myrank = 0 \n");
  }
   else{
    // printf("Valor de n: %d \n",n);
    // printf("Valor de lm: %d \n", lm);
     dist= Crear_matriz_pesos_consecutivo(lm,n);
     caminos = Crear_matriz_caminos_consecutivo(lm,n);
-        //printf("Vamos a hacer el mpi_scatter \n");
     MPI_Scatter(&dist[resto][0],slice*n,MPI_FLOAT,&dist[resto][0],slice*n,MPI_FLOAT,0,MPI_COMM_WORLD);
-        //printf("Primer scatter hecho \n");
     MPI_Scatter(&caminos[resto][0],slice*n,MPI_INT,&caminos[resto][0],slice*n,MPI_INT,0,MPI_COMM_WORLD);
-        //printf("Segundo scatter hecho \n");
   }
 
         //printf("Vamos a entrar al bucle \n");
