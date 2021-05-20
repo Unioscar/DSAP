@@ -29,168 +29,164 @@ int main(int argc,char** argv){
     a_chunk_sizes=(int *)malloc(numprocs*sizeof(int));
     a_despla=(int *)malloc(numprocs*sizeof(int));
 
-    if(numprocs > MAXPROC){
-        MPI_Finalize();
-        return 0;
-    }
-    if(myrank == 0){
-        do{
-            printf("Introduce el valor de s: ");
-            scanf("%d",&s);
-            printf("\n");
+    if(numprocs < MAXPROC){
 
-            if(s > SMAX){
-                printf("El valor de s no esta dentro de los limites permitidos \n");
-            }
-        } while(s > SMAX);
+        if(myrank == 0){
+            do{
+                printf("Introduce el valor de s: \n");
+                scanf("%d",&s);
+
+                if(s > SMAX){
+                    printf("El valor de s no esta dentro de los limites permitidos \n");
+                }
+            } while(s > SMAX);
+            
+            printf("Introduce el valor de iterMax: \n");
+            scanf("%d",&iterMax);
+
+            printf("Introduce el valor de inner: \n");
+            scanf("%d",&inner);
+
+            resto = s %numprocs;
+
+            vi=1.0;
+            fi=100.0;
+            fd=100.0;
+            fa=100.0;
+            fb=0.0;
+
+            x = CrearArray2D_double_consecutivo(s+2,s+2);
+            xold = CrearArray2D_double_consecutivo(s+2,s+2);
+            xant = CrearArray2D_double_consecutivo(s+2,s+2);
+            xinit = CrearArray2D_double_consecutivo(s+2,s+2);
         
-        printf("Introduce el valor de iterMax: ");
-        scanf("%d",&iterMax);
-        printf("\n");
+            inicializar(xinit,s,s,vi,fi,fd,fa,fb,0,1);
+            inicializar(xant,s,s,vi,fi,fd,fa,fb,0,1);
+            inicializar(xold,s,s,vi,fi,fd,fa,fb,0,1);
+        }
+        else{
 
-        printf("Introduce el valor de inner: ");
-        scanf("%d",&inner);
-        printf("\n");
+            resto = 0;
 
-        resto = s %numprocs;
-
-        vi=1.0;
-        fi=100.0;
-        fd=100.0;
-        fa=100.0;
-        fb=0.0;
-
-        x = CrearArray2D_double_consecutivo(s+2,s+2);
-        xold = CrearArray2D_double_consecutivo(s+2,s+2);
-        xant = CrearArray2D_double_consecutivo(s+2,s+2);
-        xinit = CrearArray2D_double_consecutivo(s+2,s+2);
-    
-        inicializar(xinit,s,s,vi,fi,fd,fa,fb,0,1);
-        inicializar(xant,s,s,vi,fi,fd,fa,fb,0,1);
-        inicializar(xold,s,s,vi,fi,fd,fa,fb,0,1);
-    }
-    else{
-
-        resto = 0;
-
-        x = CrearArray2D_double_consecutivo(s+2,s+2);
-        xold = CrearArray2D_double_consecutivo(s+2,s+2);
-        xant = CrearArray2D_double_consecutivo(s+2,s+2);
-        xinit = CrearArray2D_double_consecutivo(s+2,s+2);
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    MPI_Bcast(&s,1,MPI_INT,0,MPI_COMM_WORLD);
-    MPI_Bcast(&iterMax,1,MPI_INT,0,MPI_COMM_WORLD);
-    MPI_Bcast(&inner,1,MPI_INT,0,MPI_COMM_WORLD);
-
-    slice = s / numprocs;
-    slocal = slice + resto;
-
-    for(int i = 0 ; i < numprocs ;i++) {
-        a_chunk_sizes[i] = (slocal + 2) * (s + 2);
-        a_despla[i] = i * (slice + 1) * (s + 2);
-    }
-
-    a_despla[0] = 0;
-
-
-    MPI_Scatterv(&xinit[0][0],a_chunk_sizes,&a_despla[0],MPI_DOUBLE,&x[0][0],a_chunk_sizes[myrank],MPI_DOUBLE,0,MPI_COMM_WORLD);
-
-    while ((norm2 > cota) && (count < iterMax)){
-        count++;
-        for(int i = 1 ; i <= slocal; i++){
-            for(int j = 1; j <= slocal; j++){
-                xold[i][j] = x[i][j];
-            }
+            x = CrearArray2D_double_consecutivo(s+2,s+2);
+            xold = CrearArray2D_double_consecutivo(s+2,s+2);
+            xant = CrearArray2D_double_consecutivo(s+2,s+2);
+            xinit = CrearArray2D_double_consecutivo(s+2,s+2);
         }
 
-        for(int iter = 0; iter < inner; iter++){
+        MPI_Barrier(MPI_COMM_WORLD);
 
-            for(int i = 1; i <= slocal; i++){
+        MPI_Bcast(&s,1,MPI_INT,0,MPI_COMM_WORLD);
+        MPI_Bcast(&iterMax,1,MPI_INT,0,MPI_COMM_WORLD);
+        MPI_Bcast(&inner,1,MPI_INT,0,MPI_COMM_WORLD);
+
+        slice = s / numprocs;
+        slocal = slice + resto;
+
+        for(int i = 0 ; i < numprocs ;i++) {
+            a_chunk_sizes[i] = (slocal + 2) * (s + 2);
+            a_despla[i] = i * (slice + 1) * (s + 2);
+        }
+
+        a_despla[0] = 0;
+
+
+        MPI_Scatterv(&xinit[0][0],a_chunk_sizes,&a_despla[0],MPI_DOUBLE,&x[0][0],a_chunk_sizes[myrank],MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+        while ((norm2 > cota) && (count < iterMax)){
+            count++;
+            for(int i = 1 ; i <= slocal; i++){
                 for(int j = 1; j <= slocal; j++){
-                    xant[i][j] = x[i][j];
+                    xold[i][j] = x[i][j];
                 }
             }
-            for(int i = 1; i <= slocal; i++){
-                for(int j = 1; j <= slocal; j++){
-                    x[i][j] = 0.25 * (xant[i+1][j] + xant[i-1][j] + xant[i][j+1] + xant[i][j-1]);
+
+            for(int iter = 0; iter < inner; iter++){
+
+                for(int i = 1; i <= slocal; i++){
+                    for(int j = 1; j <= slocal; j++){
+                        xant[i][j] = x[i][j];
+                    }
                 }
-            }             
-        
-        }
-
-        for(int i = 1; i <= slocal; i++){
-            for(int j = 1; j <= slocal; i++){
-                sum = sum + (x[i][j]-xant[i][j])*(x[i][j]-xant[i][j]);
+                for(int i = 1; i <= slocal; i++){
+                    for(int j = 1; j <= slocal; j++){
+                        x[i][j] = 0.25 * (xant[i+1][j] + xant[i-1][j] + xant[i][j+1] + xant[i][j-1]);
+                    }
+                }             
+            
             }
-        }
-        norm2 = sqrt(sum);
 
-        MPI_Allreduce(MPI_IN_PLACE,&norm2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-
-        if(myrank == 0)
-        {
-            MPI_Send(&x[slocal+1][0],s+2,MPI_DOUBLE,1,0,MPI_COMM_WORLD);
-            MPI_Recv(&x[slocal+1][0],s+2,MPI_DOUBLE,1,0,MPI_COMM_WORLD,&estado);
-        }
-        else if(myrank == numprocs - 1)
-        {
-            MPI_Send(&x[slocal-1][0],s+2,MPI_DOUBLE,myrank-1,0,MPI_COMM_WORLD);
-            MPI_Recv(&x[slocal-1][0],s+2,MPI_DOUBLE,myrank-1,0,MPI_COMM_WORLD,&estado);
-        }
-        else
-        {
-            MPI_Send(&x[slocal+1][0],s+2,MPI_DOUBLE,myrank+1,0,MPI_COMM_WORLD);
-            MPI_Recv(&x[slocal+1][0],s+2,MPI_DOUBLE,myrank+1,0,MPI_COMM_WORLD,&estado);
-
-            MPI_Send(&x[slocal-1][0],s+2,MPI_DOUBLE,myrank-1,0,MPI_COMM_WORLD);
-            MPI_Recv(&x[slocal-1][0],s+2,MPI_DOUBLE,myrank-1,0,MPI_COMM_WORLD,&estado);
-        }
-    }
-
-    RES = fopen("res.m","w");
-    fprintf(RES,"mx=%d;\n",s);
-    fprintf(RES,"sol=[\n");
-    MPI_Send(&x[1][1],slocal*s,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
-    if(myrank == numprocs - 1)
-    {
-        MPI_Send(&x[1][1],(slocal+1)*s,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
-    }
-    if(myrank == 0)
-    {
-        for(int iter = 0; iter < numprocs; iter++)
-        {
-            for (int i=0; i<=slocal+1; i++) {
-                for (int j=0; j<=s+1; j++)
-                    fprintf(RES,"%f ",x[i][j]);
-                fprintf(RES,"\n\n");
+            for(int i = 1; i <= slocal; i++){
+                for(int j = 1; j <= slocal; i++){
+                    sum = sum + (x[i][j]-xant[i][j])*(x[i][j]-xant[i][j]);
+                }
             }
-            if(iter == numprocs -1)
+            norm2 = sqrt(sum);
+
+            MPI_Allreduce(MPI_IN_PLACE,&norm2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+
+            if(myrank == 0)
             {
-                MPI_Recv(&x[1][1],(slice+1)*s,MPI_DOUBLE,iter,0,MPI_COMM_WORLD,&estado);
+                MPI_Send(&x[slocal+1][0],s+2,MPI_DOUBLE,1,0,MPI_COMM_WORLD);
+                MPI_Recv(&x[slocal+1][0],s+2,MPI_DOUBLE,1,0,MPI_COMM_WORLD,&estado);
+            }
+            else if(myrank == numprocs - 1)
+            {
+                MPI_Send(&x[slocal-1][0],s+2,MPI_DOUBLE,myrank-1,0,MPI_COMM_WORLD);
+                MPI_Recv(&x[slocal-1][0],s+2,MPI_DOUBLE,myrank-1,0,MPI_COMM_WORLD,&estado);
             }
             else
             {
-                MPI_Recv(&x[1][1],slice*s,MPI_DOUBLE,iter,0,MPI_COMM_WORLD,&estado);
+                MPI_Send(&x[slocal+1][0],s+2,MPI_DOUBLE,myrank+1,0,MPI_COMM_WORLD);
+                MPI_Recv(&x[slocal+1][0],s+2,MPI_DOUBLE,myrank+1,0,MPI_COMM_WORLD,&estado);
+
+                MPI_Send(&x[slocal-1][0],s+2,MPI_DOUBLE,myrank-1,0,MPI_COMM_WORLD);
+                MPI_Recv(&x[slocal-1][0],s+2,MPI_DOUBLE,myrank-1,0,MPI_COMM_WORLD,&estado);
             }
-            
         }
 
-        fprintf(RES, "];");
-        fclose(RES);
-            
+        RES = fopen("res.m","w");
+        fprintf(RES,"mx=%d;\n",s);
+        fprintf(RES,"sol=[\n");
+        MPI_Send(&x[1][1],slocal*s,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+        if(myrank == numprocs - 1)
+        {
+            MPI_Send(&x[1][1],(slocal+1)*s,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+        }
+        if(myrank == 0)
+        {
+            for(int iter = 0; iter < numprocs; iter++)
+            {
+                for (int i=0; i<=slocal+1; i++) {
+                    for (int j=0; j<=s+1; j++)
+                        fprintf(RES,"%f ",x[i][j]);
+                    fprintf(RES,"\n\n");
+                }
+                if(iter == numprocs -1)
+                {
+                    MPI_Recv(&x[1][1],(slice+1)*s,MPI_DOUBLE,iter,0,MPI_COMM_WORLD,&estado);
+                }
+                else
+                {
+                    MPI_Recv(&x[1][1],slice*s,MPI_DOUBLE,iter,0,MPI_COMM_WORLD,&estado);
+                }
+                
+            }
+
+            fprintf(RES, "];");
+            fclose(RES);
+                
+        }
+
+    
+        free(x);
+        free(xold);
+        free(xinit);
+        free(xant);
+
+        MPI_Finalize();
+        return 0;
     }
-
-   
-    free(x);
-    free(xold);
-    free(xinit);
-    free(xant);
-
-    MPI_Finalize();
-    return 0;
 }
 
 double **CrearArray2D_double_consecutivo(int Filas, int Columnas)
